@@ -12,16 +12,58 @@ import {
 const currentPositionOptions = Array.from({ length: 13 }, (_, index) => index);
 const harborTargetOptions = [10, 11, 12, 13, 14, 15];
 const remainingRollOptions = [0, 1, 2, 3];
-const moneyOptions = Array.from({ length: 16 }, (_, index) => index * 5);
 const costOptions = Array.from({ length: 13 }, (_, index) => index);
 const pirateCountOptions = [1, 2];
 const manilaDiceSides = 6;
 
+type CargoProfile = {
+  id: string;
+  label: string;
+  value: number;
+  seatCosts: number[];
+};
+
+const cargoProfiles: CargoProfile[] = [
+  {
+    id: "yellow",
+    label: "黃色 18",
+    value: 18,
+    seatCosts: [1, 2, 3],
+  },
+  {
+    id: "brown",
+    label: "棕色 24",
+    value: 24,
+    seatCosts: [2, 3, 4],
+  },
+  {
+    id: "blue",
+    label: "藍色 30",
+    value: 30,
+    seatCosts: [3, 4, 5],
+  },
+  {
+    id: "green",
+    label: "綠色 36",
+    value: 36,
+    seatCosts: [3, 4, 5, 5],
+  },
+];
+
+const moneyOptions = [
+  ...new Set([
+    ...Array.from({ length: 16 }, (_, index) => index * 5),
+    ...cargoProfiles.map((cargo) => cargo.value),
+  ]),
+].sort((left, right) => left - right);
+
 type BoatInput = {
   id: string;
   name: string;
+  cargoId: string;
   currentPosition: number;
   harborTarget: number;
+  seatCost: number;
 };
 
 type SuccessSource = "arrives" | "fails";
@@ -46,20 +88,26 @@ const initialBoats: BoatInput[] = [
   {
     id: "boat-1",
     name: "船 1",
+    cargoId: "yellow",
     currentPosition: 7,
     harborTarget: 13,
+    seatCost: 1,
   },
   {
     id: "boat-2",
     name: "船 2",
+    cargoId: "brown",
     currentPosition: 7,
     harborTarget: 13,
+    seatCost: 2,
   },
   {
     id: "boat-3",
     name: "船 3",
+    cargoId: "blue",
     currentPosition: 7,
     harborTarget: 13,
+    seatCost: 3,
   },
 ];
 
@@ -97,9 +145,9 @@ const initialPirateInput: PirateInputState = {
   cost: 5,
   pirateCount: 1,
   lootValues: {
-    "boat-1": 20,
-    "boat-2": 20,
-    "boat-3": 20,
+    "boat-1": 18,
+    "boat-2": 24,
+    "boat-3": 30,
   },
 };
 
@@ -125,6 +173,7 @@ function App() {
 
   const boatResults = boats.map((boat) => ({
     boat,
+    cargo: getCargoProfile(boat.cargoId),
     result: calculateArrivalProbability({
       currentPosition: boat.currentPosition,
       harborTarget: boat.harborTarget,
@@ -197,7 +246,7 @@ function App() {
                 index={index}
                 key={boat.id}
                 onChange={(field, value) =>
-                  updateBoat(index, field, value, setBoats)
+                  updateBoat(index, field, value, setBoats, setPirateInput)
                 }
               />
             ))}
@@ -248,9 +297,10 @@ function App() {
           </div>
 
           <div className="boat-result-list">
-            {boatResults.map(({ boat, result }) => (
+            {boatResults.map(({ boat, cargo, result }) => (
               <BoatResultCard
                 boat={boat}
+                cargo={cargo}
                 key={boat.id}
                 remainingRolls={remainingRolls}
                 result={result}
@@ -293,8 +343,8 @@ type BoatInputRowProps = {
   boat: BoatInput;
   index: number;
   onChange: (
-    field: "currentPosition" | "harborTarget",
-    value: number,
+    field: "cargoId" | "currentPosition" | "harborTarget" | "seatCost",
+    value: number | string,
   ) => void;
 };
 
@@ -307,6 +357,15 @@ function BoatInputRow({ boat, index, onChange }: BoatInputRowProps) {
         <span>出航船隻</span>
         <strong>{displayName}</strong>
       </div>
+      <StringSelectField
+        label="貨物收益"
+        value={boat.cargoId}
+        options={cargoProfiles.map((cargo) => ({
+          label: cargo.label,
+          value: cargo.id,
+        }))}
+        onChange={(value) => onChange("cargoId", value)}
+      />
       <SelectField
         label="目前位置"
         value={boat.currentPosition}
@@ -318,6 +377,12 @@ function BoatInputRow({ boat, index, onChange }: BoatInputRowProps) {
         value={boat.harborTarget}
         options={harborTargetOptions}
         onChange={(value) => onChange("harborTarget", value)}
+      />
+      <SelectField
+        label="坐船成本"
+        value={boat.seatCost}
+        options={getCargoProfile(boat.cargoId).seatCosts}
+        onChange={(value) => onChange("seatCost", value)}
       />
     </div>
   );
@@ -440,14 +505,44 @@ function PirateInputPanel({
 
 function updateBoat(
   index: number,
-  field: "currentPosition" | "harborTarget",
-  value: number,
+  field: "cargoId" | "currentPosition" | "harborTarget" | "seatCost",
+  value: number | string,
   setBoats: Dispatch<SetStateAction<BoatInput[]>>,
+  setPirateInput: Dispatch<SetStateAction<PirateInputState>>,
 ) {
   setBoats((currentBoats) =>
-    currentBoats.map((boat, boatIndex) =>
-      boatIndex === index ? { ...boat, [field]: value } : boat,
-    ),
+    currentBoats.map((boat, boatIndex) => {
+      if (boatIndex !== index) {
+        return boat;
+      }
+
+      if (field === "cargoId") {
+        const cargo = getCargoProfile(String(value));
+        setPirateInput((current) => ({
+          ...current,
+          lootValues: {
+            ...current.lootValues,
+            [boat.id]: cargo.value,
+          },
+        }));
+
+        return {
+          ...boat,
+          cargoId: cargo.id,
+          seatCost: cargo.seatCosts[0] ?? boat.seatCost,
+        };
+      }
+
+      if (field === "currentPosition") {
+        return { ...boat, currentPosition: Number(value) };
+      }
+
+      if (field === "harborTarget") {
+        return { ...boat, harborTarget: Number(value) };
+      }
+
+      return { ...boat, seatCost: Number(value) };
+    }),
   );
 }
 
@@ -466,13 +561,25 @@ function updateBet<K extends keyof BetInput>(
 
 type BoatResultCardProps = {
   boat: BoatInput;
+  cargo: CargoProfile;
   remainingRolls: number;
   result: ProbabilityResult;
 };
 
-function BoatResultCard({ boat, remainingRolls, result }: BoatResultCardProps) {
+function BoatResultCard({
+  boat,
+  cargo,
+  remainingRolls,
+  result,
+}: BoatResultCardProps) {
   const arrivalPercent = formatPercent(result.arrivalProbability);
   const failurePercent = formatPercent(result.failureProbability);
+  const seatEV = calculateCashEV({
+    successProbability: result.arrivalProbability,
+    successPayout: cargo.value,
+    failurePayout: 0,
+    cost: boat.seatCost,
+  });
 
   return (
     <article className="boat-result-card">
@@ -485,6 +592,21 @@ function BoatResultCard({ boat, remainingRolls, result }: BoatResultCardProps) {
         </div>
         <strong>剩 {remainingRolls} 骰</strong>
       </div>
+
+      <dl className="boat-cargo-metrics">
+        <div>
+          <dt>貨物收益</dt>
+          <dd>{cargo.value}</dd>
+        </div>
+        <div>
+          <dt>坐船成本</dt>
+          <dd>{boat.seatCost}</dd>
+        </div>
+        <div>
+          <dt>坐船 EV</dt>
+          <dd>{formatEV(seatEV.ev)}</dd>
+        </div>
+      </dl>
 
       <div className="probability-grid">
         <ResultTile label="到港機率" value={arrivalPercent} tone="arrival" />
@@ -595,8 +717,8 @@ function SelectField({ label, value, options, onChange }: SelectFieldProps) {
         value={value}
         onChange={(event) => onChange(Number(event.target.value))}
       >
-        {options.map((option) => (
-          <option key={option} value={option}>
+        {options.map((option, index) => (
+          <option key={`${option}-${index}`} value={option}>
             {option}
           </option>
         ))}
@@ -661,6 +783,10 @@ function getBetSuccessProbability(
   return bet.successSource === "arrives"
     ? boatResult.arrivalProbability
     : boatResult.failureProbability;
+}
+
+function getCargoProfile(cargoId: string): CargoProfile {
+  return cargoProfiles.find((cargo) => cargo.id === cargoId) ?? cargoProfiles[0]!;
 }
 
 function formatPercent(probability: number): string {

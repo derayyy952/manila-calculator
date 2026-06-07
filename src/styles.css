@@ -141,7 +141,7 @@ h1 {
 
 .boat-input-row {
   display: grid;
-  grid-template-columns: 1.1fr repeat(2, 1fr);
+  grid-template-columns: 1fr repeat(4, 1fr);
   align-items: end;
   gap: 14px;
   border: 1px solid rgba(43, 66, 48, 0.12);
@@ -334,6 +334,32 @@ h1 {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 14px;
+}
+
+.boat-cargo-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin: 0 0 14px;
+}
+
+.boat-cargo-metrics div {
+  border-radius: 16px;
+  padding: 10px;
+  background: #e8dcc4;
+}
+
+.boat-cargo-metrics dt {
+  color: #695238;
+  font-size: 0.76rem;
+  font-weight: 900;
+}
+
+.boat-cargo-metrics dd {
+  margin: 4px 0 0;
+  color: #293b2a;
+  font-size: 1.08rem;
+  font-weight: 900;
 }
 
 .boat-result-card {
@@ -712,7 +738,7 @@ h1 {
   }
 
   .boat-input-row {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     gap: 8px;
     padding: 8px;
     border-radius: 16px;
@@ -751,6 +777,10 @@ h1 {
     min-height: 0;
     padding: 6px 10px;
     border-radius: 12px;
+  }
+
+  .boat-input-row .select-field:first-of-type {
+    grid-column: span 2;
   }
 
   .boat-name strong,
@@ -838,6 +868,24 @@ h1 {
 
   .probability-grid {
     gap: 8px;
+  }
+
+  .boat-cargo-metrics {
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+
+  .boat-cargo-metrics div {
+    padding: 8px;
+    border-radius: 12px;
+  }
+
+  .boat-cargo-metrics dt {
+    font-size: 0.68rem;
+  }
+
+  .boat-cargo-metrics dd {
+    font-size: 0.86rem;
   }
 
   .result-tile {
