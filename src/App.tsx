@@ -64,7 +64,6 @@ type BoatInput = {
   currentPosition: number;
   harborTarget: number;
   seatIndex: number;
-  passengerCount: number;
 };
 
 type SuccessSource = "arrives" | "fails";
@@ -93,7 +92,6 @@ const initialBoats: BoatInput[] = [
     currentPosition: 7,
     harborTarget: 13,
     seatIndex: 0,
-    passengerCount: 1,
   },
   {
     id: "boat-2",
@@ -102,7 +100,6 @@ const initialBoats: BoatInput[] = [
     currentPosition: 7,
     harborTarget: 13,
     seatIndex: 0,
-    passengerCount: 1,
   },
   {
     id: "boat-3",
@@ -111,7 +108,6 @@ const initialBoats: BoatInput[] = [
     currentPosition: 7,
     harborTarget: 13,
     seatIndex: 0,
-    passengerCount: 1,
   },
 ];
 
@@ -351,8 +347,7 @@ type BoatInputRowProps = {
       | "cargoId"
       | "currentPosition"
       | "harborTarget"
-      | "seatIndex"
-      | "passengerCount",
+      | "seatIndex",
     value: number | string,
   ) => void;
 };
@@ -386,12 +381,6 @@ function BoatInputRow({ boat, index, onChange }: BoatInputRowProps) {
         value={boat.harborTarget}
         options={harborTargetOptions}
         onChange={(value) => onChange("harborTarget", value)}
-      />
-      <SelectField
-        label="船上人數"
-        value={boat.passengerCount}
-        options={getPassengerCountOptions(getCargoProfile(boat.cargoId))}
-        onChange={(value) => onChange("passengerCount", value)}
       />
       <SelectField
         label="坐船位置"
@@ -527,8 +516,7 @@ function updateBoat(
     | "cargoId"
     | "currentPosition"
     | "harborTarget"
-    | "seatIndex"
-    | "passengerCount",
+    | "seatIndex",
   value: number | string,
   setBoats: Dispatch<SetStateAction<BoatInput[]>>,
   setPirateInput: Dispatch<SetStateAction<PirateInputState>>,
@@ -553,7 +541,6 @@ function updateBoat(
           ...boat,
           cargoId: cargo.id,
           seatIndex: 0,
-          passengerCount: Math.min(boat.passengerCount, cargo.seatCosts.length),
         };
       }
 
@@ -563,10 +550,6 @@ function updateBoat(
 
       if (field === "harborTarget") {
         return { ...boat, harborTarget: Number(value) };
-      }
-
-      if (field === "passengerCount") {
-        return { ...boat, passengerCount: Number(value) };
       }
 
       return { ...boat, seatIndex: Number(value) };
@@ -603,7 +586,8 @@ function BoatResultCard({
   const arrivalPercent = formatPercent(result.arrivalProbability);
   const failurePercent = formatPercent(result.failureProbability);
   const seatCost = cargo.seatCosts[boat.seatIndex] ?? cargo.seatCosts[0] ?? 0;
-  const personalPayout = cargo.value / boat.passengerCount;
+  const inferredPassengerCount = boat.seatIndex + 1;
+  const personalPayout = cargo.value / inferredPassengerCount;
   const seatEV = calculateCashEV({
     successProbability: result.arrivalProbability,
     successPayout: personalPayout,
@@ -631,6 +615,10 @@ function BoatResultCard({
         <div>
           <dt>單人分得</dt>
           <dd>{numberFormatter.format(personalPayout)}</dd>
+        </div>
+        <div>
+          <dt>推定人數</dt>
+          <dd>{inferredPassengerCount}</dd>
         </div>
         <div>
           <dt>位置成本</dt>
@@ -834,14 +822,10 @@ function getSeatIndexOptions(cargo: CargoProfile): number[] {
   return cargo.seatCosts.map((_, index) => index);
 }
 
-function getPassengerCountOptions(cargo: CargoProfile): number[] {
-  return cargo.seatCosts.map((_, index) => index + 1);
-}
-
 function formatSeatPositionOption(seatIndex: number, cargo: CargoProfile): string {
   const cost = cargo.seatCosts[seatIndex] ?? 0;
 
-  return `位置 ${seatIndex + 1}（成本 ${cost}）`;
+  return `位置 ${seatIndex + 1}（成本 ${cost}，/${seatIndex + 1}）`;
 }
 
 function formatPercent(probability: number): string {

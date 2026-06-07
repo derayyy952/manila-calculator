@@ -17,7 +17,7 @@ https://derayyy952.github.io/manila-calculator/
   - 棕色：24，坐船成本 2 / 3 / 4
   - 藍色：30，坐船成本 3 / 4 / 5
   - 綠色：36，坐船成本 3 / 4 / 5 / 5
-- 計算坐船位置 EV，支援同一艘船多人平分貨物收益。
+- 計算坐船位置 EV，坐船位置會自動推定同船分攤人數。
 - 計算通用下注位置 EV。
 - 可展開海盜船分析，模型假設海盜只能搶 1 艘船。
 - 支援手機使用，包含 iPhone 橫向 landscape 版面。
@@ -51,10 +51,11 @@ https://derayyy952.github.io/manila-calculator/
 
 ### 坐船位置 EV
 
-坐船位置使用該船的到港機率。坐船位置會決定成本；如果同一艘船有多名玩家，貨物收益會先平均分配：
+坐船位置使用該船的到港機率。坐船位置會決定成本，也會推定同船分攤人數：
 
 ```text
-單人分得收益 = 貨物價值 / 船上人數
+推定人數 = 坐船位置序號
+單人分得收益 = 貨物價值 / 推定人數
 坐船 EV = 到港機率 × 單人分得收益 - 位置成本
 ```
 
@@ -63,11 +64,12 @@ https://derayyy952.github.io/manila-calculator/
 ```text
 到港機率 = 72.22%
 貨物價值 = 18
-船上人數 = 2
-單人分得收益 = 9
-位置成本 = 1
+坐船位置 = 位置 3
+推定人數 = 3
+單人分得收益 = 6
+位置成本 = 3
 
-EV = 0.7222 × 9 - 1 = +5.50
+EV = 0.7222 × 6 - 3 = +1.33
 ```
 
 ### 通用下注 EV
@@ -197,7 +199,7 @@ The goal is not to auto-play the game or give absolute strategy answers. The app
   - Brown: 24, seat costs 2 / 3 / 4
   - Blue: 30, seat costs 3 / 4 / 5
   - Green: 36, seat costs 3 / 4 / 5 / 5
-- Calculate boat-seat EV, including shared cargo payout when multiple players are on the same ship.
+- Calculate boat-seat EV. The selected seat position automatically implies the shared cargo payout divisor.
 - Calculate generic betting-position EV.
 - Optional pirate-ship analysis, assuming pirates can steal only 1 ship.
 - Mobile-friendly layout, including landscape mode for iPhone.
@@ -231,10 +233,11 @@ The app also groups final positions into a probability distribution. Any result 
 
 ### Boat Seat EV
 
-Boat seats use the selected ship's arrival probability. The selected seat determines the cost. If multiple players are on the same ship, the cargo value is divided first:
+Boat seats use the selected ship's arrival probability. The selected seat determines the cost and implies the cargo-sharing divisor:
 
 ```text
-personal payout = cargo value / passenger count
+inferred passenger count = seat position number
+personal payout = cargo value / inferred passenger count
 seat EV = arrival probability × personal payout - seat cost
 ```
 
@@ -243,11 +246,12 @@ Example:
 ```text
 arrival probability = 72.22%
 cargo value = 18
-passenger count = 2
-personal payout = 9
-seat cost = 1
+seat position = position 3
+inferred passenger count = 3
+personal payout = 6
+seat cost = 3
 
-EV = 0.7222 × 9 - 1 = +5.50
+EV = 0.7222 × 6 - 3 = +1.33
 ```
 
 ### Generic Betting EV
