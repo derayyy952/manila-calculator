@@ -17,7 +17,7 @@ https://derayyy952.github.io/manila-calculator/
   - 棕色：24，坐船成本 2 / 3 / 4
   - 藍色：30，坐船成本 3 / 4 / 5
   - 綠色：36，坐船成本 3 / 4 / 5 / 5
-- 計算坐船位置 EV。
+- 計算坐船位置 EV，支援同一艘船多人平分貨物收益。
 - 計算通用下注位置 EV。
 - 可展開海盜船分析，模型假設海盜只能搶 1 艘船。
 - 支援手機使用，包含 iPhone 橫向 landscape 版面。
@@ -51,10 +51,11 @@ https://derayyy952.github.io/manila-calculator/
 
 ### 坐船位置 EV
 
-坐船位置使用該船的到港機率：
+坐船位置使用該船的到港機率。坐船位置會決定成本；如果同一艘船有多名玩家，貨物收益會先平均分配：
 
 ```text
-坐船 EV = 到港機率 × 貨物價值 - 坐船成本
+單人分得收益 = 貨物價值 / 船上人數
+坐船 EV = 到港機率 × 單人分得收益 - 位置成本
 ```
 
 例子：
@@ -62,9 +63,11 @@ https://derayyy952.github.io/manila-calculator/
 ```text
 到港機率 = 72.22%
 貨物價值 = 18
-坐船成本 = 1
+船上人數 = 2
+單人分得收益 = 9
+位置成本 = 1
 
-EV = 0.7222 × 18 - 1 = +12.00
+EV = 0.7222 × 9 - 1 = +5.50
 ```
 
 ### 通用下注 EV
@@ -194,7 +197,7 @@ The goal is not to auto-play the game or give absolute strategy answers. The app
   - Brown: 24, seat costs 2 / 3 / 4
   - Blue: 30, seat costs 3 / 4 / 5
   - Green: 36, seat costs 3 / 4 / 5 / 5
-- Calculate boat-seat EV.
+- Calculate boat-seat EV, including shared cargo payout when multiple players are on the same ship.
 - Calculate generic betting-position EV.
 - Optional pirate-ship analysis, assuming pirates can steal only 1 ship.
 - Mobile-friendly layout, including landscape mode for iPhone.
@@ -228,10 +231,11 @@ The app also groups final positions into a probability distribution. Any result 
 
 ### Boat Seat EV
 
-Boat seats use the selected ship's arrival probability:
+Boat seats use the selected ship's arrival probability. The selected seat determines the cost. If multiple players are on the same ship, the cargo value is divided first:
 
 ```text
-seat EV = arrival probability × cargo value - seat cost
+personal payout = cargo value / passenger count
+seat EV = arrival probability × personal payout - seat cost
 ```
 
 Example:
@@ -239,9 +243,11 @@ Example:
 ```text
 arrival probability = 72.22%
 cargo value = 18
+passenger count = 2
+personal payout = 9
 seat cost = 1
 
-EV = 0.7222 × 18 - 1 = +12.00
+EV = 0.7222 × 9 - 1 = +5.50
 ```
 
 ### Generic Betting EV

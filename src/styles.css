@@ -141,7 +141,7 @@ h1 {
 
 .boat-input-row {
   display: grid;
-  grid-template-columns: 1fr repeat(4, 1fr);
+  grid-template-columns: 0.85fr 1.15fr repeat(4, 1fr);
   align-items: end;
   gap: 14px;
   border: 1px solid rgba(43, 66, 48, 0.12);
@@ -338,7 +338,7 @@ h1 {
 
 .boat-cargo-metrics {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 10px;
   margin: 0 0 14px;
 }
@@ -738,7 +738,7 @@ h1 {
   }
 
   .boat-input-row {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     gap: 8px;
     padding: 8px;
     border-radius: 16px;

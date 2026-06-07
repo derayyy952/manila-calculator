@@ -63,7 +63,8 @@ type BoatInput = {
   cargoId: string;
   currentPosition: number;
   harborTarget: number;
-  seatCost: number;
+  seatIndex: number;
+  passengerCount: number;
 };
 
 type SuccessSource = "arrives" | "fails";
@@ -91,7 +92,8 @@ const initialBoats: BoatInput[] = [
     cargoId: "yellow",
     currentPosition: 7,
     harborTarget: 13,
-    seatCost: 1,
+    seatIndex: 0,
+    passengerCount: 1,
   },
   {
     id: "boat-2",
@@ -99,7 +101,8 @@ const initialBoats: BoatInput[] = [
     cargoId: "brown",
     currentPosition: 7,
     harborTarget: 13,
-    seatCost: 2,
+    seatIndex: 0,
+    passengerCount: 1,
   },
   {
     id: "boat-3",
@@ -107,7 +110,8 @@ const initialBoats: BoatInput[] = [
     cargoId: "blue",
     currentPosition: 7,
     harborTarget: 13,
-    seatCost: 3,
+    seatIndex: 0,
+    passengerCount: 1,
   },
 ];
 
@@ -343,7 +347,12 @@ type BoatInputRowProps = {
   boat: BoatInput;
   index: number;
   onChange: (
-    field: "cargoId" | "currentPosition" | "harborTarget" | "seatCost",
+    field:
+      | "cargoId"
+      | "currentPosition"
+      | "harborTarget"
+      | "seatIndex"
+      | "passengerCount",
     value: number | string,
   ) => void;
 };
@@ -379,10 +388,19 @@ function BoatInputRow({ boat, index, onChange }: BoatInputRowProps) {
         onChange={(value) => onChange("harborTarget", value)}
       />
       <SelectField
-        label="坐船成本"
-        value={boat.seatCost}
-        options={getCargoProfile(boat.cargoId).seatCosts}
-        onChange={(value) => onChange("seatCost", value)}
+        label="船上人數"
+        value={boat.passengerCount}
+        options={getPassengerCountOptions(getCargoProfile(boat.cargoId))}
+        onChange={(value) => onChange("passengerCount", value)}
+      />
+      <SelectField
+        label="坐船位置"
+        value={boat.seatIndex}
+        options={getSeatIndexOptions(getCargoProfile(boat.cargoId))}
+        formatOption={(value) =>
+          formatSeatPositionOption(value, getCargoProfile(boat.cargoId))
+        }
+        onChange={(value) => onChange("seatIndex", value)}
       />
     </div>
   );
@@ -505,7 +523,12 @@ function PirateInputPanel({
 
 function updateBoat(
   index: number,
-  field: "cargoId" | "currentPosition" | "harborTarget" | "seatCost",
+  field:
+    | "cargoId"
+    | "currentPosition"
+    | "harborTarget"
+    | "seatIndex"
+    | "passengerCount",
   value: number | string,
   setBoats: Dispatch<SetStateAction<BoatInput[]>>,
   setPirateInput: Dispatch<SetStateAction<PirateInputState>>,
@@ -529,7 +552,8 @@ function updateBoat(
         return {
           ...boat,
           cargoId: cargo.id,
-          seatCost: cargo.seatCosts[0] ?? boat.seatCost,
+          seatIndex: 0,
+          passengerCount: Math.min(boat.passengerCount, cargo.seatCosts.length),
         };
       }
 
@@ -541,7 +565,11 @@ function updateBoat(
         return { ...boat, harborTarget: Number(value) };
       }
 
-      return { ...boat, seatCost: Number(value) };
+      if (field === "passengerCount") {
+        return { ...boat, passengerCount: Number(value) };
+      }
+
+      return { ...boat, seatIndex: Number(value) };
     }),
   );
 }
@@ -574,11 +602,13 @@ function BoatResultCard({
 }: BoatResultCardProps) {
   const arrivalPercent = formatPercent(result.arrivalProbability);
   const failurePercent = formatPercent(result.failureProbability);
+  const seatCost = cargo.seatCosts[boat.seatIndex] ?? cargo.seatCosts[0] ?? 0;
+  const personalPayout = cargo.value / boat.passengerCount;
   const seatEV = calculateCashEV({
     successProbability: result.arrivalProbability,
-    successPayout: cargo.value,
+    successPayout: personalPayout,
     failurePayout: 0,
-    cost: boat.seatCost,
+    cost: seatCost,
   });
 
   return (
@@ -599,8 +629,12 @@ function BoatResultCard({
           <dd>{cargo.value}</dd>
         </div>
         <div>
-          <dt>坐船成本</dt>
-          <dd>{boat.seatCost}</dd>
+          <dt>單人分得</dt>
+          <dd>{numberFormatter.format(personalPayout)}</dd>
+        </div>
+        <div>
+          <dt>位置成本</dt>
+          <dd>{seatCost}</dd>
         </div>
         <div>
           <dt>坐船 EV</dt>
@@ -706,10 +740,17 @@ type SelectFieldProps = {
   label: string;
   value: number;
   options: number[];
+  formatOption?: (value: number) => string;
   onChange: (value: number) => void;
 };
 
-function SelectField({ label, value, options, onChange }: SelectFieldProps) {
+function SelectField({
+  label,
+  value,
+  options,
+  formatOption,
+  onChange,
+}: SelectFieldProps) {
   return (
     <label className="select-field">
       <span>{label}</span>
@@ -719,7 +760,7 @@ function SelectField({ label, value, options, onChange }: SelectFieldProps) {
       >
         {options.map((option, index) => (
           <option key={`${option}-${index}`} value={option}>
-            {option}
+            {formatOption ? formatOption(option) : option}
           </option>
         ))}
       </select>
@@ -787,6 +828,20 @@ function getBetSuccessProbability(
 
 function getCargoProfile(cargoId: string): CargoProfile {
   return cargoProfiles.find((cargo) => cargo.id === cargoId) ?? cargoProfiles[0]!;
+}
+
+function getSeatIndexOptions(cargo: CargoProfile): number[] {
+  return cargo.seatCosts.map((_, index) => index);
+}
+
+function getPassengerCountOptions(cargo: CargoProfile): number[] {
+  return cargo.seatCosts.map((_, index) => index + 1);
+}
+
+function formatSeatPositionOption(seatIndex: number, cargo: CargoProfile): string {
+  const cost = cargo.seatCosts[seatIndex] ?? 0;
+
+  return `位置 ${seatIndex + 1}（成本 ${cost}）`;
 }
 
 function formatPercent(probability: number): string {
