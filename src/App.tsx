@@ -74,40 +74,44 @@ function App() {
         </p>
       </section>
 
-      <section className="calculator-card" aria-labelledby="calculator-title">
-        <div className="section-heading">
-          <h2 id="calculator-title">局面輸入</h2>
-          <span>每船 {totalOutcomesLabel} 種結果</span>
-        </div>
+      <div className="workspace-grid">
+        <section className="calculator-card" aria-labelledby="calculator-title">
+          <div className="section-heading">
+            <h2 id="calculator-title">局面輸入</h2>
+            <span>每船 {totalOutcomesLabel} 種結果</span>
+          </div>
 
-        <div className="boat-input-list">
-          {boats.map((boat, index) => (
-            <BoatInputRow
-              boat={boat}
-              index={index}
-              key={boat.id}
-              onChange={(field, value) => updateBoat(index, field, value, setBoats)}
-            />
-          ))}
-        </div>
+          <div className="boat-input-list">
+            {boats.map((boat, index) => (
+              <BoatInputRow
+                boat={boat}
+                index={index}
+                key={boat.id}
+                onChange={(field, value) =>
+                  updateBoat(index, field, value, setBoats)
+                }
+              />
+            ))}
+          </div>
 
-        <button className="calculate-button" onClick={() => setHasCalculated(true)}>
-          計算
-        </button>
-      </section>
+          <button className="calculate-button" onClick={() => setHasCalculated(true)}>
+            計算
+          </button>
+        </section>
 
-      <section className="result-card" aria-live="polite">
-        <div className="section-heading">
-          <h2>計算結果</h2>
-          <span>{hasCalculated ? "已更新" : "預設範例"}</span>
-        </div>
+        <section className="result-card" aria-live="polite">
+          <div className="section-heading">
+            <h2>計算結果</h2>
+            <span>{hasCalculated ? "已更新" : "預設範例"}</span>
+          </div>
 
-        <div className="boat-result-list">
-          {boatResults.map(({ boat, result }) => (
-            <BoatResultCard boat={boat} key={boat.id} result={result} />
-          ))}
-        </div>
-      </section>
+          <div className="boat-result-list">
+            {boatResults.map(({ boat, result }) => (
+              <BoatResultCard boat={boat} key={boat.id} result={result} />
+            ))}
+          </div>
+        </section>
+      </div>
     </main>
   );
 }

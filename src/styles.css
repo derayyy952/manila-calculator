@@ -96,6 +96,11 @@ h1 {
   line-height: 1.7;
 }
 
+.workspace-grid {
+  display: grid;
+  gap: 18px;
+}
+
 .calculator-card,
 .result-card {
   margin-top: 18px;
@@ -367,5 +372,174 @@ h1 {
   .section-heading {
     align-items: flex-start;
     flex-direction: column;
+  }
+}
+
+@media (max-height: 520px) and (orientation: landscape) {
+  body {
+    overflow: hidden;
+  }
+
+  .app-shell {
+    display: grid;
+    grid-template-rows: auto 1fr;
+    width: calc(100% - 18px);
+    height: 100vh;
+    padding: 8px 0;
+  }
+
+  .hero-card {
+    min-height: 0;
+    padding: 12px 16px;
+    border-radius: 18px;
+  }
+
+  .hero-card::after {
+    width: 100px;
+    height: 100px;
+  }
+
+  .eyebrow {
+    margin-bottom: 4px;
+    font-size: 0.68rem;
+  }
+
+  h1 {
+    max-width: none;
+    margin-bottom: 0;
+    font-size: clamp(1.35rem, 4vw, 2rem);
+    letter-spacing: -0.04em;
+  }
+
+  .intro {
+    display: none;
+  }
+
+  .workspace-grid {
+    grid-template-columns: minmax(330px, 0.95fr) minmax(430px, 1.25fr);
+    gap: 10px;
+    min-height: 0;
+  }
+
+  .calculator-card,
+  .result-card {
+    overflow: auto;
+    min-height: 0;
+    margin-top: 10px;
+    padding: 12px;
+    border-radius: 18px;
+  }
+
+  .section-heading {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .section-heading h2 {
+    font-size: 1rem;
+  }
+
+  .section-heading span,
+  .boat-result-heading strong {
+    padding: 6px 9px;
+    font-size: 0.72rem;
+  }
+
+  .boat-input-list,
+  .boat-result-list {
+    gap: 8px;
+  }
+
+  .boat-input-row {
+    grid-template-columns: 0.9fr repeat(3, 1fr);
+    gap: 8px;
+    padding: 8px;
+    border-radius: 16px;
+  }
+
+  .boat-name {
+    grid-column: auto;
+    min-height: 44px;
+    padding: 8px 10px;
+    border-radius: 14px;
+  }
+
+  .boat-name strong {
+    font-size: 0.95rem;
+  }
+
+  .select-field {
+    gap: 5px;
+    font-size: 0.72rem;
+  }
+
+  .select-field select {
+    min-height: 44px;
+    border-radius: 14px;
+    padding: 0 28px 0 10px;
+    font-size: 1rem;
+  }
+
+  .calculate-button {
+    min-height: 44px;
+    margin-top: 10px;
+    border-radius: 15px;
+    font-size: 0.95rem;
+  }
+
+  .boat-result-card {
+    padding: 10px;
+    border-radius: 16px;
+  }
+
+  .boat-result-heading {
+    margin-bottom: 8px;
+  }
+
+  .boat-result-heading h3 {
+    font-size: 0.98rem;
+  }
+
+  .probability-grid {
+    gap: 8px;
+  }
+
+  .result-tile {
+    border-radius: 16px;
+    padding: 10px;
+  }
+
+  .result-tile span {
+    margin-bottom: 5px;
+    font-size: 0.78rem;
+  }
+
+  .result-tile strong {
+    font-size: clamp(1.45rem, 4.5vw, 2.1rem);
+  }
+
+  .distribution-panel {
+    margin-top: 10px;
+  }
+
+  .distribution-panel h4 {
+    margin-bottom: 8px;
+    font-size: 0.88rem;
+  }
+
+  .distribution-list {
+    gap: 6px;
+  }
+
+  .distribution-row {
+    grid-template-columns: 76px 1fr 58px;
+    gap: 7px;
+    font-size: 0.78rem;
+  }
+
+  .bar-track {
+    height: 10px;
   }
 }
