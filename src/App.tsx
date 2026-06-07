@@ -1,6 +1,10 @@
 import { type Dispatch, type SetStateAction, useState } from "react";
 import { calculateCashEV, type EVResult } from "./lib/ev";
 import {
+  calculateSingleShipPirateEV,
+  type PirateResult,
+} from "./lib/pirate";
+import {
   calculateArrivalProbability,
   type ProbabilityResult,
 } from "./lib/probability";
@@ -10,6 +14,7 @@ const harborTargetOptions = [10, 11, 12, 13, 14, 15];
 const remainingRollOptions = [0, 1, 2, 3];
 const moneyOptions = Array.from({ length: 16 }, (_, index) => index * 5);
 const costOptions = Array.from({ length: 13 }, (_, index) => index);
+const pirateCountOptions = [1, 2];
 const manilaDiceSides = 6;
 
 type BoatInput = {
@@ -29,6 +34,12 @@ type BetInput = {
   cost: number;
   successPayout: number;
   failurePayout: number;
+};
+
+type PirateInputState = {
+  cost: number;
+  pirateCount: 1 | 2;
+  lootValues: Record<string, number>;
 };
 
 const initialBoats: BoatInput[] = [
@@ -82,6 +93,16 @@ const initialBets: BetInput[] = [
   },
 ];
 
+const initialPirateInput: PirateInputState = {
+  cost: 5,
+  pirateCount: 1,
+  lootValues: {
+    "boat-1": 20,
+    "boat-2": 20,
+    "boat-3": 20,
+  },
+};
+
 const numberFormatter = new Intl.NumberFormat("zh-Hant", {
   maximumFractionDigits: 2,
   minimumFractionDigits: 2,
@@ -97,6 +118,9 @@ function App() {
   const [boats, setBoats] = useState<BoatInput[]>(initialBoats);
   const [remainingRolls, setRemainingRolls] = useState(2);
   const [bets, setBets] = useState<BetInput[]>(initialBets);
+  const [pirateInput, setPirateInput] =
+    useState<PirateInputState>(initialPirateInput);
+  const [showPirateAnalysis, setShowPirateAnalysis] = useState(false);
   const [hasCalculated, setHasCalculated] = useState(false);
 
   const boatResults = boats.map((boat) => ({
@@ -130,15 +154,22 @@ function App() {
     };
   });
 
+  const pirateResult = calculateSingleShipPirateEV({
+    arrivalProbabilities: boatResults.map(({ result }) => result.arrivalProbability),
+    lootValues: boats.map((boat) => pirateInput.lootValues[boat.id] ?? 0),
+    pirateCount: pirateInput.pirateCount,
+    cost: pirateInput.cost,
+  });
+
   const totalOutcomes = boatResults[0]?.result.totalOutcomes ?? 0;
 
   return (
     <main className="app-shell">
       <section className="hero-card">
-        <p className="eyebrow">Manila v0.2</p>
+        <p className="eyebrow">Manila v0.3</p>
         <h1>機率與下注 EV 計算器</h1>
         <p className="intro">
-          三艘船共用同一個剩餘骰子數。先算船隻到港率，再把成功率套入下注位置，顯示現金 EV、ROI 與盈虧平衡成功率。
+          三艘船共用同一個剩餘骰子數。先算船隻到港率，再評估下注位置與只能搶 1 艘的海盜船 EV。
         </p>
       </section>
 
@@ -190,6 +221,21 @@ function App() {
             ))}
           </div>
 
+          <button
+            className="secondary-button"
+            onClick={() => setShowPirateAnalysis((current) => !current)}
+          >
+            {showPirateAnalysis ? "收起海盜船分析" : "海盜船分析"}
+          </button>
+
+          {showPirateAnalysis ? (
+            <PirateInputPanel
+              boats={boats}
+              pirateInput={pirateInput}
+              setPirateInput={setPirateInput}
+            />
+          ) : null}
+
           <button className="calculate-button" onClick={() => setHasCalculated(true)}>
             計算
           </button>
@@ -227,6 +273,16 @@ function App() {
               />
             ))}
           </div>
+
+          {showPirateAnalysis ? (
+            <>
+              <div className="subsection-heading result-subsection">
+                <h3>海盜船分析</h3>
+                <span>只能搶 1 艘</span>
+              </div>
+              <PirateResultCard result={pirateResult} />
+            </>
+          ) : null}
         </section>
       </div>
     </main>
@@ -316,6 +372,68 @@ function BetInputRow({ bet, boatOptions, onChange }: BetInputRowProps) {
         options={moneyOptions}
         onChange={(value) => onChange("failurePayout", value)}
       />
+    </div>
+  );
+}
+
+type PirateInputPanelProps = {
+  boats: BoatInput[];
+  pirateInput: PirateInputState;
+  setPirateInput: Dispatch<SetStateAction<PirateInputState>>;
+};
+
+function PirateInputPanel({
+  boats,
+  pirateInput,
+  setPirateInput,
+}: PirateInputPanelProps) {
+  return (
+    <div className="pirate-panel">
+      <div className="pirate-config-row">
+        <SelectField
+          label="海盜成本"
+          value={pirateInput.cost}
+          options={costOptions}
+          onChange={(value) =>
+            setPirateInput((current) => ({ ...current, cost: value }))
+          }
+        />
+        <SelectField
+          label="海盜玩家人數"
+          value={pirateInput.pirateCount}
+          options={pirateCountOptions}
+          onChange={(value) =>
+            setPirateInput((current) => ({
+              ...current,
+              pirateCount: value === 2 ? 2 : 1,
+            }))
+          }
+        />
+      </div>
+
+      <div className="pirate-loot-list">
+        {boats.map((boat) => (
+          <SelectField
+            key={boat.id}
+            label={`${boat.name} 可搶收益`}
+            value={pirateInput.lootValues[boat.id] ?? 0}
+            options={moneyOptions}
+            onChange={(value) =>
+              setPirateInput((current) => ({
+                ...current,
+                lootValues: {
+                  ...current.lootValues,
+                  [boat.id]: value,
+                },
+              }))
+            }
+          />
+        ))}
+      </div>
+
+      <p className="model-note">
+        模型假設海盜只能搶 1 艘；如果多艘船到港，會取可搶收益最高的那艘計算期望值。
+      </p>
     </div>
   );
 }
@@ -424,6 +542,38 @@ function BetResultCard({ bet, evResult, successProbability }: BetResultCardProps
         <div>
           <dt>盈虧平衡</dt>
           <dd>{formatNullablePercent(evResult.breakEvenProbability)}</dd>
+        </div>
+      </dl>
+    </article>
+  );
+}
+
+type PirateResultCardProps = {
+  result: PirateResult;
+};
+
+function PirateResultCard({ result }: PirateResultCardProps) {
+  return (
+    <article className="pirate-result-card">
+      <div className="pirate-result-hero">
+        <div>
+          <span>海盜 EV</span>
+          <h3>{formatEV(result.ev)}</h3>
+        </div>
+        <strong>{result.recommendation}</strong>
+      </div>
+      <dl className="ev-metrics pirate-metrics">
+        <div>
+          <dt>有船可搶</dt>
+          <dd>{formatPercent(result.stealableProbability)}</dd>
+        </div>
+        <div>
+          <dt>期望可搶收益</dt>
+          <dd>{numberFormatter.format(result.expectedLoot)}</dd>
+        </div>
+        <div>
+          <dt>單人期望收益</dt>
+          <dd>{numberFormatter.format(result.expectedLootPerPirate)}</dd>
         </div>
       </dl>
     </article>
