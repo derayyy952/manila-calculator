@@ -453,21 +453,28 @@ h1 {
   }
 
   .boat-input-row {
-    grid-template-columns: 0.9fr repeat(3, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     gap: 8px;
     padding: 8px;
     border-radius: 16px;
   }
 
   .boat-name {
-    grid-column: auto;
-    min-height: 44px;
-    padding: 8px 10px;
-    border-radius: 14px;
+    display: flex;
+    grid-column: 1 / -1;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 0;
+    padding: 6px 10px;
+    border-radius: 12px;
   }
 
   .boat-name strong {
-    font-size: 0.95rem;
+    font-size: 0.92rem;
+  }
+
+  .boat-name span {
+    font-size: 0.66rem;
   }
 
   .select-field {
