@@ -11,7 +11,7 @@ const manilaDiceSides = 6;
 
 type BoatInput = {
   id: string;
-  ware: string;
+  name: string;
   currentPosition: number;
   harborTarget: number;
   remainingRolls: number;
@@ -19,22 +19,22 @@ type BoatInput = {
 
 const initialBoats: BoatInput[] = [
   {
-    id: "jade",
-    ware: "Jade",
+    id: "boat-1",
+    name: "船 1",
     currentPosition: 7,
     harborTarget: 13,
     remainingRolls: 2,
   },
   {
-    id: "silk",
-    ware: "Silk",
+    id: "boat-2",
+    name: "船 2",
     currentPosition: 7,
     harborTarget: 13,
     remainingRolls: 2,
   },
   {
-    id: "ginseng",
-    ware: "Ginseng",
+    id: "boat-3",
+    name: "船 3",
     currentPosition: 7,
     harborTarget: 13,
     remainingRolls: 2,
@@ -126,11 +126,13 @@ type BoatInputRowProps = {
 };
 
 function BoatInputRow({ boat, index, onChange }: BoatInputRowProps) {
+  const displayName = boat.name || `船 ${index + 1}`;
+
   return (
     <div className="boat-input-row">
       <div className="boat-name">
-        <span>船 {index + 1}</span>
-        <strong>{boat.ware}</strong>
+        <span>出航船隻</span>
+        <strong>{displayName}</strong>
       </div>
       <SelectField
         label="目前位置"
@@ -180,7 +182,7 @@ function BoatResultCard({ boat, result }: BoatResultCardProps) {
     <article className="boat-result-card">
       <div className="boat-result-heading">
         <div>
-          <span>{boat.ware}</span>
+          <span>{boat.name}</span>
           <h3>
             位置 {boat.currentPosition} → {boat.harborTarget}
           </h3>
