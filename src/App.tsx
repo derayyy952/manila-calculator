@@ -1,4 +1,5 @@
 import { type Dispatch, type SetStateAction, useState } from "react";
+import { calculateCashEV, type EVResult } from "./lib/ev";
 import {
   calculateArrivalProbability,
   type ProbabilityResult,
@@ -7,6 +8,8 @@ import {
 const currentPositionOptions = Array.from({ length: 13 }, (_, index) => index);
 const harborTargetOptions = [10, 11, 12, 13, 14, 15];
 const remainingRollOptions = [0, 1, 2, 3];
+const moneyOptions = Array.from({ length: 16 }, (_, index) => index * 5);
+const costOptions = Array.from({ length: 13 }, (_, index) => index);
 const manilaDiceSides = 6;
 
 type BoatInput = {
@@ -14,7 +17,18 @@ type BoatInput = {
   name: string;
   currentPosition: number;
   harborTarget: number;
-  remainingRolls: number;
+};
+
+type SuccessSource = "arrives" | "fails";
+
+type BetInput = {
+  id: string;
+  name: string;
+  boatId: string;
+  successSource: SuccessSource;
+  cost: number;
+  successPayout: number;
+  failurePayout: number;
 };
 
 const initialBoats: BoatInput[] = [
@@ -23,21 +37,48 @@ const initialBoats: BoatInput[] = [
     name: "船 1",
     currentPosition: 7,
     harborTarget: 13,
-    remainingRolls: 2,
   },
   {
     id: "boat-2",
     name: "船 2",
     currentPosition: 7,
     harborTarget: 13,
-    remainingRolls: 2,
   },
   {
     id: "boat-3",
     name: "船 3",
     currentPosition: 7,
     harborTarget: 13,
-    remainingRolls: 2,
+  },
+];
+
+const initialBets: BetInput[] = [
+  {
+    id: "bet-1",
+    name: "下注 1",
+    boatId: "boat-1",
+    successSource: "arrives",
+    cost: 5,
+    successPayout: 20,
+    failurePayout: 0,
+  },
+  {
+    id: "bet-2",
+    name: "下注 2",
+    boatId: "boat-2",
+    successSource: "arrives",
+    cost: 5,
+    successPayout: 20,
+    failurePayout: 0,
+  },
+  {
+    id: "bet-3",
+    name: "下注 3",
+    boatId: "boat-3",
+    successSource: "fails",
+    cost: 4,
+    successPayout: 15,
+    failurePayout: 0,
   },
 ];
 
@@ -46,8 +87,16 @@ const numberFormatter = new Intl.NumberFormat("zh-Hant", {
   minimumFractionDigits: 2,
 });
 
+const evFormatter = new Intl.NumberFormat("zh-Hant", {
+  maximumFractionDigits: 2,
+  minimumFractionDigits: 2,
+  signDisplay: "exceptZero",
+});
+
 function App() {
   const [boats, setBoats] = useState<BoatInput[]>(initialBoats);
+  const [remainingRolls, setRemainingRolls] = useState(2);
+  const [bets, setBets] = useState<BetInput[]>(initialBets);
   const [hasCalculated, setHasCalculated] = useState(false);
 
   const boatResults = boats.map((boat) => ({
@@ -55,22 +104,41 @@ function App() {
     result: calculateArrivalProbability({
       currentPosition: boat.currentPosition,
       harborTarget: boat.harborTarget,
-      remainingRolls: boat.remainingRolls,
+      remainingRolls,
       diceSides: manilaDiceSides,
     }),
   }));
 
-  const totalOutcomesLabel = boatResults
-    .map(({ result }) => result.totalOutcomes)
-    .join(" / ");
+  const boatResultById = new Map(
+    boatResults.map(({ boat, result }) => [boat.id, result]),
+  );
+
+  const betResults = bets.map((bet) => {
+    const boatResult = boatResultById.get(bet.boatId);
+    const successProbability = getBetSuccessProbability(bet, boatResult);
+    const evResult = calculateCashEV({
+      successProbability,
+      successPayout: bet.successPayout,
+      failurePayout: bet.failurePayout,
+      cost: bet.cost,
+    });
+
+    return {
+      bet,
+      evResult,
+      successProbability,
+    };
+  });
+
+  const totalOutcomes = boatResults[0]?.result.totalOutcomes ?? 0;
 
   return (
     <main className="app-shell">
       <section className="hero-card">
-        <p className="eyebrow">Manila v0.1</p>
-        <h1>船隻到港機率計算器</h1>
+        <p className="eyebrow">Manila v0.2</p>
+        <h1>機率與下注 EV 計算器</h1>
         <p className="intro">
-          用三列下拉選單快速輸入本輪三艘船的局面。骰子固定為 Manila 的六面骰，系統會枚舉剩餘骰子結果。
+          三艘船共用同一個剩餘骰子數。先算船隻到港率，再把成功率套入下注位置，顯示現金 EV、ROI 與盈虧平衡成功率。
         </p>
       </section>
 
@@ -78,7 +146,17 @@ function App() {
         <section className="calculator-card" aria-labelledby="calculator-title">
           <div className="section-heading">
             <h2 id="calculator-title">局面輸入</h2>
-            <span>每船 {totalOutcomesLabel} 種結果</span>
+            <span>每船 {totalOutcomes} 種結果</span>
+          </div>
+
+          <div className="shared-control">
+            <SelectField
+              label="全局剩餘骰子"
+              value={remainingRolls}
+              options={remainingRollOptions}
+              onChange={setRemainingRolls}
+            />
+            <p>三艘船同步使用這個骰子數；Manila 骰子固定為 6 面。</p>
           </div>
 
           <div className="boat-input-list">
@@ -94,6 +172,24 @@ function App() {
             ))}
           </div>
 
+          <div className="subsection-heading">
+            <h3>下注位置 EV</h3>
+            <span>v0.2 現金 EV</span>
+          </div>
+
+          <div className="bet-input-list">
+            {bets.map((bet, index) => (
+              <BetInputRow
+                bet={bet}
+                boatOptions={boats}
+                key={bet.id}
+                onChange={(field, value) =>
+                  updateBet(index, field, value, setBets)
+                }
+              />
+            ))}
+          </div>
+
           <button className="calculate-button" onClick={() => setHasCalculated(true)}>
             計算
           </button>
@@ -101,13 +197,34 @@ function App() {
 
         <section className="result-card" aria-live="polite">
           <div className="section-heading">
-            <h2>計算結果</h2>
+            <h2>即時結果</h2>
             <span>{hasCalculated ? "已更新" : "預設範例"}</span>
           </div>
 
           <div className="boat-result-list">
             {boatResults.map(({ boat, result }) => (
-              <BoatResultCard boat={boat} key={boat.id} result={result} />
+              <BoatResultCard
+                boat={boat}
+                key={boat.id}
+                remainingRolls={remainingRolls}
+                result={result}
+              />
+            ))}
+          </div>
+
+          <div className="subsection-heading result-subsection">
+            <h3>下注 EV</h3>
+            <span>按 EV 高低判斷</span>
+          </div>
+
+          <div className="ev-result-list">
+            {betResults.map(({ bet, evResult, successProbability }) => (
+              <BetResultCard
+                bet={bet}
+                evResult={evResult}
+                key={bet.id}
+                successProbability={successProbability}
+              />
             ))}
           </div>
         </section>
@@ -120,7 +237,7 @@ type BoatInputRowProps = {
   boat: BoatInput;
   index: number;
   onChange: (
-    field: "currentPosition" | "harborTarget" | "remainingRolls",
+    field: "currentPosition" | "harborTarget",
     value: number,
   ) => void;
 };
@@ -146,11 +263,58 @@ function BoatInputRow({ boat, index, onChange }: BoatInputRowProps) {
         options={harborTargetOptions}
         onChange={(value) => onChange("harborTarget", value)}
       />
+    </div>
+  );
+}
+
+type BetInputRowProps = {
+  bet: BetInput;
+  boatOptions: BoatInput[];
+  onChange: <K extends keyof BetInput>(field: K, value: BetInput[K]) => void;
+};
+
+function BetInputRow({ bet, boatOptions, onChange }: BetInputRowProps) {
+  return (
+    <div className="bet-input-row">
+      <div className="bet-name">
+        <span>位置</span>
+        <strong>{bet.name}</strong>
+      </div>
+      <StringSelectField
+        label="套用船"
+        value={bet.boatId}
+        options={boatOptions.map((boat) => ({
+          label: boat.name,
+          value: boat.id,
+        }))}
+        onChange={(value) => onChange("boatId", value)}
+      />
+      <StringSelectField
+        label="成功條件"
+        value={bet.successSource}
+        options={[
+          { label: "船到港", value: "arrives" },
+          { label: "船未到港", value: "fails" },
+        ]}
+        onChange={(value) => onChange("successSource", value as SuccessSource)}
+      />
       <SelectField
-        label="剩餘骰子"
-        value={boat.remainingRolls}
-        options={remainingRollOptions}
-        onChange={(value) => onChange("remainingRolls", value)}
+        label="成本"
+        value={bet.cost}
+        options={costOptions}
+        onChange={(value) => onChange("cost", value)}
+      />
+      <SelectField
+        label="成功收益"
+        value={bet.successPayout}
+        options={moneyOptions}
+        onChange={(value) => onChange("successPayout", value)}
+      />
+      <SelectField
+        label="失敗收益"
+        value={bet.failurePayout}
+        options={moneyOptions}
+        onChange={(value) => onChange("failurePayout", value)}
       />
     </div>
   );
@@ -158,7 +322,7 @@ function BoatInputRow({ boat, index, onChange }: BoatInputRowProps) {
 
 function updateBoat(
   index: number,
-  field: "currentPosition" | "harborTarget" | "remainingRolls",
+  field: "currentPosition" | "harborTarget",
   value: number,
   setBoats: Dispatch<SetStateAction<BoatInput[]>>,
 ) {
@@ -169,12 +333,26 @@ function updateBoat(
   );
 }
 
+function updateBet<K extends keyof BetInput>(
+  index: number,
+  field: K,
+  value: BetInput[K],
+  setBets: Dispatch<SetStateAction<BetInput[]>>,
+) {
+  setBets((currentBets) =>
+    currentBets.map((bet, betIndex) =>
+      betIndex === index ? { ...bet, [field]: value } : bet,
+    ),
+  );
+}
+
 type BoatResultCardProps = {
   boat: BoatInput;
+  remainingRolls: number;
   result: ProbabilityResult;
 };
 
-function BoatResultCard({ boat, result }: BoatResultCardProps) {
+function BoatResultCard({ boat, remainingRolls, result }: BoatResultCardProps) {
   const arrivalPercent = formatPercent(result.arrivalProbability);
   const failurePercent = formatPercent(result.failureProbability);
 
@@ -187,7 +365,7 @@ function BoatResultCard({ boat, result }: BoatResultCardProps) {
             位置 {boat.currentPosition} → {boat.harborTarget}
           </h3>
         </div>
-        <strong>剩 {boat.remainingRolls} 骰</strong>
+        <strong>剩 {remainingRolls} 骰</strong>
       </div>
 
       <div className="probability-grid">
@@ -218,6 +396,40 @@ function BoatResultCard({ boat, result }: BoatResultCardProps) {
   );
 }
 
+type BetResultCardProps = {
+  bet: BetInput;
+  evResult: EVResult;
+  successProbability: number;
+};
+
+function BetResultCard({ bet, evResult, successProbability }: BetResultCardProps) {
+  return (
+    <article className="ev-result-card">
+      <div className="ev-result-heading">
+        <div>
+          <span>{bet.name}</span>
+          <h3>{formatEV(evResult.ev)}</h3>
+        </div>
+        <strong>{rateEV(evResult.ev)}</strong>
+      </div>
+      <dl className="ev-metrics">
+        <div>
+          <dt>成功率</dt>
+          <dd>{formatPercent(successProbability)}</dd>
+        </div>
+        <div>
+          <dt>ROI</dt>
+          <dd>{formatNullablePercent(evResult.roi)}</dd>
+        </div>
+        <div>
+          <dt>盈虧平衡</dt>
+          <dd>{formatNullablePercent(evResult.breakEvenProbability)}</dd>
+        </div>
+      </dl>
+    </article>
+  );
+}
+
 type SelectFieldProps = {
   label: string;
   value: number;
@@ -243,6 +455,36 @@ function SelectField({ label, value, options, onChange }: SelectFieldProps) {
   );
 }
 
+type StringSelectFieldProps = {
+  label: string;
+  value: string;
+  options: Array<{
+    label: string;
+    value: string;
+  }>;
+  onChange: (value: string) => void;
+};
+
+function StringSelectField({
+  label,
+  value,
+  options,
+  onChange,
+}: StringSelectFieldProps) {
+  return (
+    <label className="select-field">
+      <span>{label}</span>
+      <select value={value} onChange={(event) => onChange(event.target.value)}>
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
 type ResultTileProps = {
   label: string;
   value: string;
@@ -258,14 +500,47 @@ function ResultTile({ label, value, tone }: ResultTileProps) {
   );
 }
 
+function getBetSuccessProbability(
+  bet: BetInput,
+  boatResult: ProbabilityResult | undefined,
+): number {
+  if (!boatResult) {
+    return 0;
+  }
+
+  return bet.successSource === "arrives"
+    ? boatResult.arrivalProbability
+    : boatResult.failureProbability;
+}
+
 function formatPercent(probability: number): string {
   return `${numberFormatter.format(probability * 100)}%`;
+}
+
+function formatNullablePercent(value: number | null): string {
+  return value === null ? "N/A" : formatPercent(value);
+}
+
+function formatEV(ev: number): string {
+  return evFormatter.format(ev);
 }
 
 function formatPosition(position: string): string {
   return position.endsWith("_or_more")
     ? `${position.replace("_or_more", "")}+ 到港`
     : `位置 ${position}`;
+}
+
+function rateEV(ev: number): string {
+  if (ev >= 5) {
+    return "強";
+  }
+
+  if (ev >= 0) {
+    return "可考慮";
+  }
+
+  return "不划算";
 }
 
 export default App;
