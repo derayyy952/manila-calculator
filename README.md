@@ -18,7 +18,6 @@ https://derayyy952.github.io/manila-calculator/
   - 藍色：30，坐船成本 3 / 4 / 5
   - 綠色：36，坐船成本 3 / 4 / 5 / 5
 - 計算坐船位置 EV，坐船位置會自動推定同船分攤人數。
-- 計算通用下注位置 EV。
 - 可展開海盜船分析，模型假設海盜只能搶 1 艘船。
 - 支援手機使用，包含 iPhone 橫向 landscape 版面。
 
@@ -70,34 +69,6 @@ https://derayyy952.github.io/manila-calculator/
 位置成本 = 3
 
 EV = 0.7222 × 6 - 3 = +1.33
-```
-
-### 通用下注 EV
-
-一般下注位置：
-
-```text
-EV = 成功機率 × 成功收益
-   + 失敗機率 × 失敗收益
-   - 成本
-```
-
-其中：
-
-```text
-失敗機率 = 1 - 成功機率
-```
-
-ROI：
-
-```text
-ROI = EV / 成本
-```
-
-盈虧平衡成功率：
-
-```text
-盈虧平衡成功率 = 成本 / (成功收益 - 失敗收益)
 ```
 
 ### 海盜船 EV
@@ -200,7 +171,6 @@ The goal is not to auto-play the game or give absolute strategy answers. The app
   - Blue: 30, seat costs 3 / 4 / 5
   - Green: 36, seat costs 3 / 4 / 5 / 5
 - Calculate boat-seat EV. The selected seat position automatically implies the shared cargo payout divisor.
-- Calculate generic betting-position EV.
 - Optional pirate-ship analysis, assuming pirates can steal only 1 ship.
 - Mobile-friendly layout, including landscape mode for iPhone.
 
@@ -252,34 +222,6 @@ personal payout = 6
 seat cost = 3
 
 EV = 0.7222 × 6 - 3 = +1.33
-```
-
-### Generic Betting EV
-
-For a general betting position:
-
-```text
-EV = success probability × success payout
-   + failure probability × failure payout
-   - cost
-```
-
-Where:
-
-```text
-failure probability = 1 - success probability
-```
-
-ROI:
-
-```text
-ROI = EV / cost
-```
-
-Break-even success probability:
-
-```text
-break-even probability = cost / (success payout - failure payout)
 ```
 
 ### Pirate Ship EV

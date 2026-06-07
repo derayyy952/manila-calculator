@@ -1,5 +1,5 @@
 import { type Dispatch, type SetStateAction, useState } from "react";
-import { calculateCashEV, type EVResult } from "./lib/ev";
+import { calculateCashEV } from "./lib/ev";
 import {
   calculateSingleShipPirateEV,
   type PirateResult,
@@ -66,18 +66,6 @@ type BoatInput = {
   seatIndex: number;
 };
 
-type SuccessSource = "arrives" | "fails";
-
-type BetInput = {
-  id: string;
-  name: string;
-  boatId: string;
-  successSource: SuccessSource;
-  cost: number;
-  successPayout: number;
-  failurePayout: number;
-};
-
 type PirateInputState = {
   cost: number;
   pirateCount: 1 | 2;
@@ -111,36 +99,6 @@ const initialBoats: BoatInput[] = [
   },
 ];
 
-const initialBets: BetInput[] = [
-  {
-    id: "bet-1",
-    name: "下注 1",
-    boatId: "boat-1",
-    successSource: "arrives",
-    cost: 5,
-    successPayout: 20,
-    failurePayout: 0,
-  },
-  {
-    id: "bet-2",
-    name: "下注 2",
-    boatId: "boat-2",
-    successSource: "arrives",
-    cost: 5,
-    successPayout: 20,
-    failurePayout: 0,
-  },
-  {
-    id: "bet-3",
-    name: "下注 3",
-    boatId: "boat-3",
-    successSource: "fails",
-    cost: 4,
-    successPayout: 15,
-    failurePayout: 0,
-  },
-];
-
 const initialPirateInput: PirateInputState = {
   cost: 5,
   pirateCount: 1,
@@ -165,7 +123,6 @@ const evFormatter = new Intl.NumberFormat("zh-Hant", {
 function App() {
   const [boats, setBoats] = useState<BoatInput[]>(initialBoats);
   const [remainingRolls, setRemainingRolls] = useState(2);
-  const [bets, setBets] = useState<BetInput[]>(initialBets);
   const [pirateInput, setPirateInput] =
     useState<PirateInputState>(initialPirateInput);
   const [showPirateAnalysis, setShowPirateAnalysis] = useState(false);
@@ -182,27 +139,6 @@ function App() {
     }),
   }));
 
-  const boatResultById = new Map(
-    boatResults.map(({ boat, result }) => [boat.id, result]),
-  );
-
-  const betResults = bets.map((bet) => {
-    const boatResult = boatResultById.get(bet.boatId);
-    const successProbability = getBetSuccessProbability(bet, boatResult);
-    const evResult = calculateCashEV({
-      successProbability,
-      successPayout: bet.successPayout,
-      failurePayout: bet.failurePayout,
-      cost: bet.cost,
-    });
-
-    return {
-      bet,
-      evResult,
-      successProbability,
-    };
-  });
-
   const pirateResult = calculateSingleShipPirateEV({
     arrivalProbabilities: boatResults.map(({ result }) => result.arrivalProbability),
     lootValues: boats.map((boat) => pirateInput.lootValues[boat.id] ?? 0),
@@ -216,9 +152,9 @@ function App() {
     <main className="app-shell">
       <section className="hero-card">
         <p className="eyebrow">Manila v0.3</p>
-        <h1>機率與下注 EV 計算器</h1>
+        <h1>機率與坐船 EV 計算器</h1>
         <p className="intro">
-          三艘船共用同一個剩餘骰子數。先算船隻到港率，再評估下注位置與只能搶 1 艘的海盜船 EV。
+          三艘船共用同一個剩餘骰子數。先算船隻到港率，再評估坐船位置與只能搶 1 艘的海盜船 EV。
         </p>
       </section>
 
@@ -247,24 +183,6 @@ function App() {
                 key={boat.id}
                 onChange={(field, value) =>
                   updateBoat(index, field, value, setBoats, setPirateInput)
-                }
-              />
-            ))}
-          </div>
-
-          <div className="subsection-heading">
-            <h3>下注位置 EV</h3>
-            <span>v0.2 現金 EV</span>
-          </div>
-
-          <div className="bet-input-list">
-            {bets.map((bet, index) => (
-              <BetInputRow
-                bet={bet}
-                boatOptions={boats}
-                key={bet.id}
-                onChange={(field, value) =>
-                  updateBet(index, field, value, setBets)
                 }
               />
             ))}
@@ -304,22 +222,6 @@ function App() {
                 key={boat.id}
                 remainingRolls={remainingRolls}
                 result={result}
-              />
-            ))}
-          </div>
-
-          <div className="subsection-heading result-subsection">
-            <h3>下注 EV</h3>
-            <span>按 EV 高低判斷</span>
-          </div>
-
-          <div className="ev-result-list">
-            {betResults.map(({ bet, evResult, successProbability }) => (
-              <BetResultCard
-                bet={bet}
-                evResult={evResult}
-                key={bet.id}
-                successProbability={successProbability}
               />
             ))}
           </div>
@@ -390,59 +292,6 @@ function BoatInputRow({ boat, index, onChange }: BoatInputRowProps) {
           formatSeatPositionOption(value, getCargoProfile(boat.cargoId))
         }
         onChange={(value) => onChange("seatIndex", value)}
-      />
-    </div>
-  );
-}
-
-type BetInputRowProps = {
-  bet: BetInput;
-  boatOptions: BoatInput[];
-  onChange: <K extends keyof BetInput>(field: K, value: BetInput[K]) => void;
-};
-
-function BetInputRow({ bet, boatOptions, onChange }: BetInputRowProps) {
-  return (
-    <div className="bet-input-row">
-      <div className="bet-name">
-        <span>位置</span>
-        <strong>{bet.name}</strong>
-      </div>
-      <StringSelectField
-        label="套用船"
-        value={bet.boatId}
-        options={boatOptions.map((boat) => ({
-          label: boat.name,
-          value: boat.id,
-        }))}
-        onChange={(value) => onChange("boatId", value)}
-      />
-      <StringSelectField
-        label="成功條件"
-        value={bet.successSource}
-        options={[
-          { label: "船到港", value: "arrives" },
-          { label: "船未到港", value: "fails" },
-        ]}
-        onChange={(value) => onChange("successSource", value as SuccessSource)}
-      />
-      <SelectField
-        label="成本"
-        value={bet.cost}
-        options={costOptions}
-        onChange={(value) => onChange("cost", value)}
-      />
-      <SelectField
-        label="成功收益"
-        value={bet.successPayout}
-        options={moneyOptions}
-        onChange={(value) => onChange("successPayout", value)}
-      />
-      <SelectField
-        label="失敗收益"
-        value={bet.failurePayout}
-        options={moneyOptions}
-        onChange={(value) => onChange("failurePayout", value)}
       />
     </div>
   );
@@ -557,19 +406,6 @@ function updateBoat(
   );
 }
 
-function updateBet<K extends keyof BetInput>(
-  index: number,
-  field: K,
-  value: BetInput[K],
-  setBets: Dispatch<SetStateAction<BetInput[]>>,
-) {
-  setBets((currentBets) =>
-    currentBets.map((bet, betIndex) =>
-      betIndex === index ? { ...bet, [field]: value } : bet,
-    ),
-  );
-}
-
 type BoatResultCardProps = {
   boat: BoatInput;
   cargo: CargoProfile;
@@ -654,40 +490,6 @@ function BoatResultCard({
           )}
         </div>
       </div>
-    </article>
-  );
-}
-
-type BetResultCardProps = {
-  bet: BetInput;
-  evResult: EVResult;
-  successProbability: number;
-};
-
-function BetResultCard({ bet, evResult, successProbability }: BetResultCardProps) {
-  return (
-    <article className="ev-result-card">
-      <div className="ev-result-heading">
-        <div>
-          <span>{bet.name}</span>
-          <h3>{formatEV(evResult.ev)}</h3>
-        </div>
-        <strong>{rateEV(evResult.ev)}</strong>
-      </div>
-      <dl className="ev-metrics">
-        <div>
-          <dt>成功率</dt>
-          <dd>{formatPercent(successProbability)}</dd>
-        </div>
-        <div>
-          <dt>ROI</dt>
-          <dd>{formatNullablePercent(evResult.roi)}</dd>
-        </div>
-        <div>
-          <dt>盈虧平衡</dt>
-          <dd>{formatNullablePercent(evResult.breakEvenProbability)}</dd>
-        </div>
-      </dl>
     </article>
   );
 }
@@ -801,19 +603,6 @@ function ResultTile({ label, value, tone }: ResultTileProps) {
   );
 }
 
-function getBetSuccessProbability(
-  bet: BetInput,
-  boatResult: ProbabilityResult | undefined,
-): number {
-  if (!boatResult) {
-    return 0;
-  }
-
-  return bet.successSource === "arrives"
-    ? boatResult.arrivalProbability
-    : boatResult.failureProbability;
-}
-
 function getCargoProfile(cargoId: string): CargoProfile {
   return cargoProfiles.find((cargo) => cargo.id === cargoId) ?? cargoProfiles[0]!;
 }
@@ -832,10 +621,6 @@ function formatPercent(probability: number): string {
   return `${numberFormatter.format(probability * 100)}%`;
 }
 
-function formatNullablePercent(value: number | null): string {
-  return value === null ? "N/A" : formatPercent(value);
-}
-
 function formatEV(ev: number): string {
   return evFormatter.format(ev);
 }
@@ -844,18 +629,6 @@ function formatPosition(position: string): string {
   return position.endsWith("_or_more")
     ? `${position.replace("_or_more", "")}+ 到港`
     : `位置 ${position}`;
-}
-
-function rateEV(ev: number): string {
-  if (ev >= 5) {
-    return "強";
-  }
-
-  if (ev >= 0) {
-    return "可考慮";
-  }
-
-  return "不划算";
 }
 
 export default App;
